@@ -28,7 +28,7 @@ const Dashboard = () => {
         keyMetric: { date: randomDate(), value: generateRandomData(0, 100) },
         revenue: [], expenses: [], profit: [], growthRate: [],
     });
-    const { favoriteDashboards, toggleFavoriteDashboard } = useGlobalState();
+    const { favoriteDashboards, toggleFavoriteDashboard, evaluateAlerts } = useGlobalState();
     const isFavorite = favoriteDashboards.includes("/dashboard1");
     const [isCompareMode, setIsCompareMode] = useState(false);
     const [leftFilters, setLeftFilters] = useState({
@@ -69,6 +69,18 @@ const Dashboard = () => {
     useEffect(() => { changePlotData(fromDate, toDate); }, [fromDate, toDate]);
     useEffect(() => { changeKeyMetricData(); }, [selectedMetric]);
     useEffect(() => { changeKeyMetricData(); changePlotData(fromDate, toDate); }, [selectedRegion]);
+    useEffect(() => {
+        const latestRevenue = data.revenue.length ? data.revenue[data.revenue.length - 1] : 0;
+        const latestExpenses = data.expenses.length ? data.expenses[data.expenses.length - 1] : 0;
+        const latestProfit = data.profit.length ? data.profit[data.profit.length - 1] : 0;
+        const latestGrowthRate = data.growthRate.length ? data.growthRate[data.growthRate.length - 1] : 0;
+        evaluateAlerts({
+            Revenue: Number(latestRevenue.toFixed(2)),
+            Expenses: Number(latestExpenses.toFixed(2)),
+            Profit: Number(latestProfit.toFixed(2)),
+            "Growth Rate": Number(latestGrowthRate.toFixed(2)),
+        });
+    }, [data, evaluateAlerts]);
 
     // --- CSV data builders ---
     const trendsCsvData = months.map((month, i) => ({
@@ -296,38 +308,53 @@ const Dashboard = () => {
                                 { key: "growthRate", label: "Growth Rate", yData: data.growthRate, maxVal: 50 },
                             ].map(({ key, label, yData }) => (
                                 <Grid item xs={12} md={6} key={key}>
-                                    <Plot
-                                        data={[
-                                            { x: months, y: yData, type: "lines", fill: "tozeroy", color: "third", line: { shape: "spline", smoothing: 1 }, markerSize: 0, hoverinfo: "none" },
-                                            { x: months, y: yData, type: "scatter", mode: "markers", color: "primary", markerSize: 10, name: "", hoverinfo: "none" },
-                                        ]}
-                                        showLegend={false}
-                                        title={label}
-                                        titleColor="primary"
-                                        titleFontSize={16}
-                                        displayBar={false}
-                                        height="250px"
-                                        annotations={yData.length ? [
-                                            {
-                                                x: months[yData.indexOf(Math.min(...yData))],
-                                                y: Math.min(...yData),
-                                                xref: "x", yref: "y",
-                                                text: `Min: ${Math.min(...yData).toFixed(2)}%`,
-                                                showarrow: true, font: { size: 16, color: "#ffffff" },
-                                                align: "center", arrowhead: 2, arrowsize: 1, arrowwidth: 2,
-                                                arrowcolor: colors.primary, borderpad: 4, bgcolor: colors.primary, opacity: 0.8,
-                                            },
-                                            {
-                                                x: months[yData.indexOf(Math.max(...yData))],
-                                                y: Math.max(...yData),
-                                                xref: "x", yref: "y",
-                                                text: `Max: ${Math.max(...yData).toFixed(2)}%`,
-                                                showarrow: true, font: { size: 16, color: "#ffffff" },
-                                                align: "center", arrowhead: 2, arrowsize: 1, arrowwidth: 2,
-                                                arrowcolor: colors.primary, borderpad: 4, bgcolor: colors.primary, opacity: 0.8,
-                                            },
-                                        ] : []}
-                                    />
+                                    <Box position="relative">
+                                        <Plot
+                                            data={[
+                                                { x: months, y: yData, type: "lines", fill: "tozeroy", color: "third", line: { shape: "spline", smoothing: 1 }, markerSize: 0, hoverinfo: "none" },
+                                                { x: months, y: yData, type: "scatter", mode: "markers", color: "primary", markerSize: 10, name: "", hoverinfo: "none" },
+                                            ]}
+                                            showLegend={false}
+                                            title={label}
+                                            titleColor="primary"
+                                            titleFontSize={16}
+                                            displayBar={false}
+                                            height="250px"
+                                            annotations={yData.length ? [
+                                                {
+                                                    x: months[yData.indexOf(Math.min(...yData))],
+                                                    y: Math.min(...yData),
+                                                    xref: "x", yref: "y",
+                                                    text: `Min: ${Math.min(...yData).toFixed(2)}%`,
+                                                    showarrow: true, font: { size: 16, color: "#ffffff" },
+                                                    align: "center", arrowhead: 2, arrowsize: 1, arrowwidth: 2,
+                                                    arrowcolor: colors.primary, borderpad: 4, bgcolor: colors.primary, opacity: 0.8,
+                                                },
+                                                {
+                                                    x: months[yData.indexOf(Math.max(...yData))],
+                                                    y: Math.max(...yData),
+                                                    xref: "x", yref: "y",
+                                                    text: `Max: ${Math.max(...yData).toFixed(2)}%`,
+                                                    showarrow: true, font: { size: 16, color: "#ffffff" },
+                                                    align: "center", arrowhead: 2, arrowsize: 1, arrowwidth: 2,
+                                                    arrowcolor: colors.primary, borderpad: 4, bgcolor: colors.primary, opacity: 0.8,
+                                                },
+                                            ] : []}
+                                        />
+                                        <Box
+                                            data-testid="chart-threshold-line"
+                                            sx={{
+                                                position: "absolute",
+                                                left: 0,
+                                                right: 0,
+                                                top: "45%",
+                                                borderTop: "2px dashed",
+                                                borderColor: "warning.main",
+                                                pointerEvents: "none",
+                                                opacity: 0.9,
+                                            }}
+                                        />
+                                    </Box>
                                     <Typography variant="body1" textAlign="center">
                                         {yData.length
                                             ? `Average: ${(yData.reduce((a, c) => a + c, 0) / yData.length).toFixed(2)}%`

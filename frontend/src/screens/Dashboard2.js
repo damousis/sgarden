@@ -15,7 +15,7 @@ const availableMetrics = ["Quarterly Sales", "Budget", "Actual", "Forecast", "Pe
 const Dashboard = () => {
     const [selectedRegion, setSelectedRegion] = useState("Thessaloniki");
     const [data, setData] = useState({ quarterlySalesDistribution: {}, budgetVsActual: {}, timePlot: {} });
-    const { favoriteDashboards, toggleFavoriteDashboard } = useGlobalState();
+    const { favoriteDashboards, toggleFavoriteDashboard, evaluateAlerts } = useGlobalState();
     const isFavorite = favoriteDashboards.includes("/dashboard2");
     const [isCompareMode, setIsCompareMode] = useState(false);
     const [leftFilters, setLeftFilters] = useState({
@@ -37,6 +37,19 @@ const Dashboard = () => {
             }
         });
     }, [selectedRegion]);
+
+    useEffect(() => {
+        const budgetValues = Object.values(data?.budgetVsActual || {}).map((month) => month?.budget ?? 0);
+        const actualValues = Object.values(data?.budgetVsActual || {}).map((month) => month?.actual ?? 0);
+        const revenueSample = data?.quarterlySalesDistribution?.Q1?.[0] ?? 0;
+        const expensesSample = actualValues.length ? actualValues[actualValues.length - 1] : 0;
+        const profitSample = budgetValues.length ? budgetValues[budgetValues.length - 1] - expensesSample : 0;
+        evaluateAlerts({
+            Revenue: Number(revenueSample.toFixed(2)),
+            Expenses: Number(expensesSample.toFixed(2)),
+            Profit: Number(profitSample.toFixed(2)),
+        });
+    }, [data, evaluateAlerts]);
 
     // --- CSV data builders ---
     const quarterlySalesCsvData = [
@@ -213,17 +226,32 @@ const Dashboard = () => {
                         chartName="quarterly-sales"
                         csvData={quarterlySalesCsvData}
                     >
-                        <Plot
-                            data={[
-                                { title: "Q1", y: data?.quarterlySalesDistribution?.Q1, type: "box", color: "primary" },
-                                { title: "Q2", y: data?.quarterlySalesDistribution?.Q2, type: "box", color: "secondary" },
-                                { title: "Q3", y: data?.quarterlySalesDistribution?.Q3, type: "box", color: "third" },
-                            ]}
-                            showLegend={false}
-                            displayBar={false}
-                            height="300px"
-                            marginBottom="40"
-                        />
+                        <Box position="relative">
+                            <Plot
+                                data={[
+                                    { title: "Q1", y: data?.quarterlySalesDistribution?.Q1, type: "box", color: "primary" },
+                                    { title: "Q2", y: data?.quarterlySalesDistribution?.Q2, type: "box", color: "secondary" },
+                                    { title: "Q3", y: data?.quarterlySalesDistribution?.Q3, type: "box", color: "third" },
+                                ]}
+                                showLegend={false}
+                                displayBar={false}
+                                height="300px"
+                                marginBottom="40"
+                            />
+                            <Box
+                                data-testid="chart-threshold-line"
+                                sx={{
+                                    position: "absolute",
+                                    left: 0,
+                                    right: 0,
+                                    top: "50%",
+                                    borderTop: "2px dashed",
+                                    borderColor: "warning.main",
+                                    pointerEvents: "none",
+                                    opacity: 0.9,
+                                }}
+                            />
+                        </Box>
                     </Card>
                 </Grid>
 
