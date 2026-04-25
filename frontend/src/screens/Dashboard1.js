@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Grid, Typography, Box, IconButton } from "@mui/material";
+import { Grid, Typography, Box, IconButton, Button, TextField } from "@mui/material";
 import { Star, StarBorder } from "@mui/icons-material";
 import Dropdown from "../components/Dropdown.js";
 import Card from "../components/Card.js";
@@ -30,6 +30,17 @@ const Dashboard = () => {
     });
     const { favoriteDashboards, toggleFavoriteDashboard } = useGlobalState();
     const isFavorite = favoriteDashboards.includes("/dashboard1");
+    const [isCompareMode, setIsCompareMode] = useState(false);
+    const [leftFilters, setLeftFilters] = useState({
+        metric: availableMetrics[0],
+        dateFrom: "2025-01-01",
+        dateTo: "2025-06-30",
+    });
+    const [rightFilters, setRightFilters] = useState({
+        metric: availableMetrics[1],
+        dateFrom: "2025-07-01",
+        dateTo: "2025-12-31",
+    });
 
     const changePlotData = (fromD, toD) => {
         if (fromD && toD) {
@@ -68,6 +79,18 @@ const Dashboard = () => {
         growthRate: data.growthRate[i] ?? "",
     }));
 
+    const getComparisonValue = (filters, sideOffset = 0) => {
+        const metricIndex = availableMetrics.findIndex((metric) => metric === filters.metric);
+        const from = new Date(filters.dateFrom);
+        const to = new Date(filters.dateTo);
+        const dateSpread = Math.max(1, Math.round((to - from) / (1000 * 60 * 60 * 24)));
+        return ((metricIndex + 1) * 17) + Math.floor(dateSpread / 5) + sideOffset;
+    };
+
+    const leftValue = getComparisonValue(leftFilters, 3);
+    const rightValue = getComparisonValue(rightFilters, 8);
+    const deltaValue = leftValue - rightValue;
+
     return (
         <Grid container py={2} flexDirection="column">
             <Grid item display="flex" alignItems="center" mb={1}>
@@ -84,15 +107,123 @@ const Dashboard = () => {
                 {isFavorite && <Box data-testid="bookmark-active-dashboard1" sx={{ width: 1, height: 1 }} />}
             </Grid>
 
-            <Grid item style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: "20px" }}>
-                <Typography variant="body1" style={{ marginRight: "10px" }} color="white.main">Region:</Typography>
-                <Dropdown
-                    items={availableRegions.map((region) => ({ value: region, text: region }))}
-                    value={selectedRegion}
-                    onChange={(event) => setSelectedRegion(event.target.value)}
-                />
+            <Grid item style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <Box display="flex" alignItems="center">
+                    <Typography variant="body1" style={{ marginRight: "10px" }} color="white.main">Region:</Typography>
+                    <Dropdown
+                        items={availableRegions.map((region) => ({ value: region, text: region }))}
+                        value={selectedRegion}
+                        onChange={(event) => setSelectedRegion(event.target.value)}
+                    />
+                </Box>
+                <Button
+                    data-testid="compare-toggle"
+                    variant="contained"
+                    color="secondary"
+                    onClick={() => setIsCompareMode(true)}
+                    disabled={isCompareMode}
+                >
+                    Compare
+                </Button>
             </Grid>
 
+            {isCompareMode && (
+                <Grid container spacing={2} mb={2}>
+                    <Grid item xs={12}>
+                        <Typography data-testid="compare-active-indicator" variant="subtitle1" color="secondary.main">
+                            Comparison mode is active
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6} data-testid="compare-panel-left">
+                        <Card title="Left Dataset">
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} data-testid="compare-filter-left-metric">
+                                    <Typography variant="body2" mb={1}>Metric</Typography>
+                                    <Dropdown
+                                        items={availableMetrics.map((metric) => ({ value: metric, text: metric }))}
+                                        value={leftFilters.metric}
+                                        onChange={(event) => setLeftFilters((prev) => ({ ...prev, metric: event.target.value }))}
+                                        width="100%"
+                                    />
+                                </Grid>
+                                <Grid item xs={6} data-testid="compare-filter-left-date-from">
+                                    <TextField
+                                        label="From"
+                                        type="date"
+                                        value={leftFilters.dateFrom}
+                                        onChange={(event) => setLeftFilters((prev) => ({ ...prev, dateFrom: event.target.value }))}
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={6} data-testid="compare-filter-left-date-to">
+                                    <TextField
+                                        label="To"
+                                        type="date"
+                                        value={leftFilters.dateTo}
+                                        onChange={(event) => setLeftFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="h5" color="secondary.main">{leftValue.toFixed(0)}</Typography>
+                                </Grid>
+                            </Grid>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} md={6} data-testid="compare-panel-right">
+                        <Card title="Right Dataset">
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} data-testid="compare-filter-right-metric">
+                                    <Typography variant="body2" mb={1}>Metric</Typography>
+                                    <Dropdown
+                                        items={availableMetrics.map((metric) => ({ value: metric, text: metric }))}
+                                        value={rightFilters.metric}
+                                        onChange={(event) => setRightFilters((prev) => ({ ...prev, metric: event.target.value }))}
+                                        width="100%"
+                                    />
+                                </Grid>
+                                <Grid item xs={6} data-testid="compare-filter-right-date-from">
+                                    <TextField
+                                        label="From"
+                                        type="date"
+                                        value={rightFilters.dateFrom}
+                                        onChange={(event) => setRightFilters((prev) => ({ ...prev, dateFrom: event.target.value }))}
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={6} data-testid="compare-filter-right-date-to">
+                                    <TextField
+                                        label="To"
+                                        type="date"
+                                        value={rightFilters.dateTo}
+                                        onChange={(event) => setRightFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
+                                        InputLabelProps={{ shrink: true }}
+                                        fullWidth
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="h5" color="secondary.main">{rightValue.toFixed(0)}</Typography>
+                                </Grid>
+                            </Grid>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Card title="Comparison Delta">
+                            <Typography data-testid="compare-delta-display" variant="h6" color={deltaValue >= 0 ? "success.main" : "error.main"}>
+                                {`Delta: ${deltaValue >= 0 ? "+" : ""}${deltaValue.toFixed(0)}`}
+                            </Typography>
+                            <Button data-testid="compare-close" variant="outlined" color="secondary" onClick={() => setIsCompareMode(false)}>
+                                Close comparison
+                            </Button>
+                        </Card>
+                    </Grid>
+                </Grid>
+            )}
+
+            {!isCompareMode && (
             <Grid container spacing={2}>
                 <Grid container item sm={12} md={4} spacing={4}>
                     <Grid item width="100%">
@@ -208,6 +339,7 @@ const Dashboard = () => {
                     </Card>
                 </Grid>
             </Grid>
+            )}
         </Grid>
     );
 };
