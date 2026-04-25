@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Grid, Typography, Box, Button, TextField } from "@mui/material";
+import { Grid, Typography, Box, IconButton } from "@mui/material";
+import { Star, StarBorder } from "@mui/icons-material";
 import Dropdown from "../components/Dropdown.js";
 import Card from "../components/Card.js";
 import Plot from "../components/Plot.js";
 import DatePicker from "../components/DatePicker.js";
 import Map from "../components/Map.js";
+import useGlobalState from "../use-global-state.js";
 
 import colors from "../_colors.scss";
 
@@ -20,6 +22,8 @@ const Dashboard = () => {
     const [toDate, setToDate] = useState(new Date());
     const [months, setMonths] = useState([]);
     const [data, setData] = useState({ keyMetric: { date: randomDate(), value: generateRandomData(0, 100) }, revenue: [], expenses: [], profit: [], growthRate: [] });
+    const { favoriteDashboards, toggleFavoriteDashboard } = useGlobalState();
+    const isFavorite = favoriteDashboards.includes("/dashboard1");
 
     const changePlotData = (fromD, toD) => {
         if (fromD && toD) {
@@ -60,9 +64,19 @@ const Dashboard = () => {
 
     return (
         <Grid container py={2} flexDirection="column">
-            <Typography variant="h4" gutterBottom color="white.main">
-                Analytics
-            </Typography>
+            <Grid item display="flex" alignItems="center" mb={1}>
+                <Typography variant="h4" gutterBottom color="white.main" sx={{ mb: 0 }}>
+                    Analytics
+                </Typography>
+                <IconButton
+                    data-testid="bookmark-toggle-dashboard1"
+                    sx={{ color: "white.main", ml: 1 }}
+                    onClick={() => toggleFavoriteDashboard("/dashboard1")}
+                >
+                    {isFavorite ? <Star /> : <StarBorder />}
+                </IconButton>
+                {isFavorite && <Box data-testid="bookmark-active-dashboard1" sx={{ width: 1, height: 1 }} />}
+            </Grid>
 
             <Grid item style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: "20px" }}>
                 <Typography variant="body1" style={{ marginRight: "10px" }} color="white.main">Region:</Typography>
