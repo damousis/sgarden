@@ -80,6 +80,115 @@ router.post("/role", async (req, res) => {
 	}
 });
 
+router.get("/profile", async (_, res) => {
+	try {
+		const { user: currentUser } = res.locals;
+		const user = await User.findById(currentUser._id);
+
+		if (!user) {
+			return res.status(404).json({ success: false, message: "User not found." });
+		}
+
+		return res.json({
+			success: true,
+			profile: {
+				id: user._id,
+				username: user.username,
+				email: user.email,
+				role: user.role,
+				createdAt: user.createdAt,
+				lastActiveAt: user.lastActiveAt,
+			},
+		});
+	} catch {
+		return res.status(500).json({ success: false, message: "Something went wrong." });
+	}
+});
+
+router.put("/profile", async (req, res) => {
+	try {
+		const { user: currentUser } = res.locals;
+		const { username, email: userEmail } = req.body;
+
+		const normalizedUsername = String(username || "").trim();
+		const normalizedEmail = String(userEmail || "").trim().toLowerCase();
+
+		if (!normalizedUsername || !normalizedEmail) {
+			return res.json({ success: false, message: "Username and email are required." });
+		}
+
+		const user = await User.findById(currentUser._id);
+		if (!user) {
+			return res.status(404).json({ success: false, message: "User not found." });
+		}
+
+		const duplicateUser = await User.findOne({
+			_id: { $ne: user._id },
+			$or: [{ username: normalizedUsername }, { email: normalizedEmail }],
+		});
+
+		if (duplicateUser) {
+			return res.json({ success: false, message: "Username or e-mail is already in use." });
+		}
+
+		user.username = normalizedUsername;
+		user.email = normalizedEmail;
+		await user.save();
+
+		return res.json({
+			success: true,
+			message: "Profile updated successfully.",
+			profile: {
+				id: user._id,
+				username: user.username,
+				email: user.email,
+				role: user.role,
+				createdAt: user.createdAt,
+				lastActiveAt: user.lastActiveAt,
+			},
+		});
+	} catch {
+		return res.status(500).json({ success: false, message: "Something went wrong." });
+	}
+});
+
+router.post("/profile/password", async (req, res) => {
+	try {
+		const { user: currentUser } = res.locals;
+		const { currentPassword, newPassword } = req.body;
+
+		const currentPasswordValue = String(currentPassword || "");
+		const newPasswordValue = String(newPassword || "");
+
+		if (!currentPasswordValue || !newPasswordValue) {
+			return res.json({ success: false, message: "Current and new password are required." });
+		}
+
+		if (newPasswordValue.length < validations.minPassword) {
+			return res.json({
+				success: false,
+				message: `Password should contain at least ${validations.minPassword} characters.`,
+			});
+		}
+
+		const user = await User.findById(currentUser._id).select("+password");
+		if (!user) {
+			return res.status(404).json({ success: false, message: "User not found." });
+		}
+
+		if (!user.comparePassword(currentPasswordValue)) {
+			return res.json({ success: false, message: "Current password is incorrect." });
+		}
+
+		user.password = newPasswordValue;
+		await user.save();
+
+		return res.json({ success: true, message: "Password changed successfully." });
+	} catch {
+		return res.status(500).json({ success: false, message: "Something went wrong." });
+	}
+});
+
 router.get("/profile/:userId", async (req, res) => {
 	try {
 		const { userId } = req.params;

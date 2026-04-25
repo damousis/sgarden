@@ -74,8 +74,8 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
-const ButtonWithText = ({ text, icon, more, handler }) => (
-	<Button sx={{ height: "100%", display: "flex", flexDirection: "column", p: 1, mx: 1 }} onClick={(event) => handler(event)}>
+const ButtonWithText = ({ text, icon, more, handler, testId }) => (
+	<Button data-testid={testId} sx={{ height: "100%", display: "flex", flexDirection: "column", p: 1, mx: 1 }} onClick={(event) => handler(event)}>
 		<div style={{ width: "100%", height: "100%" }}>
 			{icon}
 		</div>
@@ -93,6 +93,7 @@ const Header = ({ isAuthenticated }) => {
 	const navigate = useNavigate();
 	const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = useState(null);
 	const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
+	const decodedUser = isAuthenticated ? jwt.decode() : null;
 
 	const handleMobileMenuClose = () => setMobileMoreAnchorEl(null);
 	const handleMobileMenuOpen = (event) => setMobileMoreAnchorEl(event.currentTarget);
@@ -100,6 +101,11 @@ const Header = ({ isAuthenticated }) => {
 	const CrumpLink = styled(Link)(({ theme }) => ({ display: "flex", color: theme.palette.third.main }));
 
 	const buttons = [
+		{
+			text: decodedUser?.username || "Profile",
+			testId: "profile-nav-link",
+			handler: () => navigate("/profile"),
+		},
 		{
 			icon: <LogoutIcon className={classes.svgIcon} />,
 			text: "Logout",
@@ -119,13 +125,23 @@ const Header = ({ isAuthenticated }) => {
 			open={isMobileMenuOpen}
 			onClose={handleMobileMenuClose}
 		>
-			{buttons.map((button) => (
-				<MenuItem key={button.text} onClick={button.handler}>
-					<Image src={button.icon} width="20px" sx={{ fill: "third" }} />
-					<p style={{ marginLeft: "5px" }}>{button.text}</p>
-					{button.more && <ExpandMore />}
-				</MenuItem>
-			))}
+			<MenuItem
+				onClick={() => {
+					handleMobileMenuClose();
+					navigate("/profile");
+				}}
+			>
+				<p style={{ marginLeft: "5px" }}>{"Profile"}</p>
+			</MenuItem>
+			<MenuItem
+				onClick={() => {
+					handleMobileMenuClose();
+					jwt.destroyToken();
+					navigate("/");
+				}}
+			>
+				<p style={{ marginLeft: "5px" }}>{"Logout"}</p>
+			</MenuItem>
 		</Menu>
 	);
 
@@ -156,6 +172,7 @@ const Header = ({ isAuthenticated }) => {
 										text={button.text}
 										handler={button.handler}
 										more={button.more}
+										testId={button.testId}
 									/>
 								))}
 							</Box>
