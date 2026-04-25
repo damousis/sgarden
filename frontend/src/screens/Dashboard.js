@@ -8,19 +8,19 @@ import Plot from "../components/Plot.js";
 import useGlobalState from "../use-global-state.js";
 
 const availableRegions = ["Thessaloniki", "Athens", "Patras"];
-const generateRandomData = (minimum = 0, maximum = 100) => {
-    return Math.floor(Math.random() * (maximum - minimum + 1)) + minimum;
-};
+const generateRandomData = (minimum = 0, maximum = 100) =>
+    Math.floor(Math.random() * (maximum - minimum + 1)) + minimum;
 
 const formatNumber = (number, symbol = "", showSign = true) => {
     if (!number) return "-";
-
     let formattedNumber = (number > 0 && showSign) ? "+" : "";
     formattedNumber += number;
     formattedNumber += symbol;
-
     return formattedNumber;
 };
+
+const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Dec"];
 
 const Dashboard = () => {
     const [selectedRegion, setSelectedRegion] = useState("Thessaloniki");
@@ -30,25 +30,31 @@ const Dashboard = () => {
 
     useEffect(() => {
         const newData = {
-            monthlyRevenue: {
-                value: generateRandomData(),
-                change: generateRandomData(-100, 100),
-            },
-            newCustomers: {
-                value: generateRandomData(0, 10_000),
-                change: generateRandomData(-100, 100),
-            },
-            activeSubscriptions: {
-                value: generateRandomData(0, 100_000),
-                change: generateRandomData(-100, 100),
-            },
+            monthlyRevenue: { value: generateRandomData(), change: generateRandomData(-100, 100) },
+            newCustomers: { value: generateRandomData(0, 10_000), change: generateRandomData(-100, 100) },
+            activeSubscriptions: { value: generateRandomData(0, 100_000), change: generateRandomData(-100, 100) },
             weeklySales: Array.from({ length: 7 }, () => generateRandomData(0, 100)),
             revenueTrend: Array.from({ length: 12 }, () => generateRandomData(0, 500)),
             customerSatisfaction: Array.from({ length: 12 }, () => generateRandomData(0, 500)),
         };
-
         setData(newData);
     }, [selectedRegion]);
+
+    // --- CSV data builders ---
+    const weeklySalesCsvData = DAYS.map((day, i) => ({
+        day,
+        transactions: data?.weeklySales?.[i] ?? "",
+    }));
+
+    const revenueTrendCsvData = MONTHS.map((month, i) => ({
+        month,
+        revenue: data?.revenueTrend?.[i] ?? "",
+    }));
+
+    const customerSatisfactionCsvData = MONTHS.map((month, i) => ({
+        month,
+        score: data?.customerSatisfaction?.[i] ?? "",
+    }));
 
     return (
         <Grid container py={2} flexDirection="column">
@@ -76,6 +82,7 @@ const Dashboard = () => {
             </Grid>
 
             <Grid container spacing={2}>
+                {/* Stat cards — no CSV export (no chart data) */}
                 <Grid item xs={12} sm={4}>
                     <Card title="Monthly Revenue">
                         <Box display="flex" flexDirection="column" alignItems="center">
@@ -84,9 +91,7 @@ const Dashboard = () => {
                                 <Typography variant="body" color={data?.monthlyRevenue?.change > 0 ? "success.main" : "error.main"}>
                                     {formatNumber(data?.monthlyRevenue?.change, "%")}
                                 </Typography>
-                                <Typography variant="body" color="secondary.main" ml={1}>
-                                    {"than last month"}
-                                </Typography>
+                                <Typography variant="body" color="secondary.main" ml={1}>{"than last month"}</Typography>
                             </Grid>
                         </Box>
                     </Card>
@@ -99,9 +104,7 @@ const Dashboard = () => {
                                 <Typography variant="body" color={data?.newCustomers?.change > 0 ? "success.main" : "error.main"}>
                                     {formatNumber(data?.newCustomers?.change, "%")}
                                 </Typography>
-                                <Typography variant="body" color="secondary.main" ml={1}>
-                                    {"than last month"}
-                                </Typography>
+                                <Typography variant="body" color="secondary.main" ml={1}>{"than last month"}</Typography>
                             </Grid>
                         </Box>
                     </Card>
@@ -114,17 +117,19 @@ const Dashboard = () => {
                                 <Typography variant="body" color={data?.activeSubscriptions?.change > 0 ? "success.main" : "error.main"}>
                                     {formatNumber(data?.activeSubscriptions?.change, "%")}
                                 </Typography>
-                                <Typography variant="body" color="secondary.main" ml={1}>
-                                    {"than last month"}
-                                </Typography>
+                                <Typography variant="body" color="secondary.main" ml={1}>{"than last month"}</Typography>
                             </Grid>
                         </Box>
                     </Card>
                 </Grid>
 
+                {/* Chart cards — with CSV export */}
                 <Grid item xs={12} sm={4}>
                     <Card
                         title="Weekly Sales"
+                        showCsvExport
+                        chartName="weekly-sales"
+                        csvData={weeklySalesCsvData}
                         footer={(
                             <Grid sx={{ width: "100%", borderTop: "1px solid gray" }}>
                                 <Typography variant="body2" component="p" sx={{ marginTop: "10px" }}>{"🕗 averages (last month)"}</Typography>
@@ -134,14 +139,7 @@ const Dashboard = () => {
                         footerColor="gray"
                     >
                         <Plot
-                            data={[
-                                {
-                                    x: ["M", "T", "W", "T", "F", "S", "S"],
-                                    y: data?.weeklySales,
-                                    type: "bar",
-                                    color: "third",
-                                },
-                            ]}
+                            data={[{ x: DAYS, y: data?.weeklySales, type: "bar", color: "third" }]}
                             showLegend={false}
                             title="Number of transactions per day"
                             titleColor="primary"
@@ -153,6 +151,9 @@ const Dashboard = () => {
                 <Grid item xs={12} sm={4}>
                     <Card
                         title="Revenue Trend"
+                        showCsvExport
+                        chartName="revenue-trend"
+                        csvData={revenueTrendCsvData}
                         footer={(
                             <Grid sx={{ width: "100%", borderTop: "1px solid gray" }}>
                                 <Typography variant="body2" component="p" sx={{ marginTop: "10px" }}>{"🕗 updated 4min ago"}</Typography>
@@ -162,12 +163,7 @@ const Dashboard = () => {
                         footerColor="gray"
                     >
                         <Plot
-                            data={[{
-                                x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Dec"],
-                                y: data?.revenueTrend,
-                                type: "lines+markers",
-                                color: "third",
-                            }]}
+                            data={[{ x: MONTHS, y: data?.revenueTrend, type: "lines+markers", color: "third" }]}
                             showLegend={false}
                             title="15% increase in revenue this month"
                             titleColor="primary"
@@ -179,6 +175,9 @@ const Dashboard = () => {
                 <Grid item xs={12} sm={4}>
                     <Card
                         title="Customer Satisfaction"
+                        showCsvExport
+                        chartName="customer-satisfaction"
+                        csvData={customerSatisfactionCsvData}
                         footer={(
                             <Grid sx={{ width: "100%", borderTop: "1px solid gray" }}>
                                 <Typography variant="body2" component="p" sx={{ marginTop: "10px" }}>{"🕗 just updated"}</Typography>
@@ -188,12 +187,7 @@ const Dashboard = () => {
                         footerColor="gray"
                     >
                         <Plot
-                            data={[{
-                                x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Dec"],
-                                y: data?.customerSatisfaction,
-                                type: "lines+markers",
-                                color: "third",
-                            }]}
+                            data={[{ x: MONTHS, y: data?.customerSatisfaction, type: "lines+markers", color: "third" }]}
                             showLegend={false}
                             title="Customer satisfaction score over time"
                             titleColor="primary"

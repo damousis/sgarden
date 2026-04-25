@@ -13,7 +13,10 @@ import colors from "../_colors.scss";
 const availableRegions = ["Thessaloniki", "Athens", "Patras"];
 const availableMetrics = ["Revenue", "Expenses", "Profit", "Growth Rate"];
 const generateRandomData = (min = 0, max = 10) => Math.random() * (max - min) + min;
-const randomDate = () => new Date(new Date(2020, 0, 1).getTime() + Math.random() * (new Date().getTime() - new Date(2020, 0, 1).getTime()));
+const randomDate = () => new Date(
+    new Date(2020, 0, 1).getTime() +
+    Math.random() * (new Date().getTime() - new Date(2020, 0, 1).getTime())
+);
 
 const Dashboard = () => {
     const [selectedRegion, setSelectedRegion] = useState("Thessaloniki");
@@ -21,7 +24,10 @@ const Dashboard = () => {
     const [fromDate, setFromDate] = useState(new Date(new Date().setFullYear(new Date().getFullYear() - 1)));
     const [toDate, setToDate] = useState(new Date());
     const [months, setMonths] = useState([]);
-    const [data, setData] = useState({ keyMetric: { date: randomDate(), value: generateRandomData(0, 100) }, revenue: [], expenses: [], profit: [], growthRate: [] });
+    const [data, setData] = useState({
+        keyMetric: { date: randomDate(), value: generateRandomData(0, 100) },
+        revenue: [], expenses: [], profit: [], growthRate: [],
+    });
     const { favoriteDashboards, toggleFavoriteDashboard } = useGlobalState();
     const isFavorite = favoriteDashboards.includes("/dashboard1");
 
@@ -35,32 +41,32 @@ const Dashboard = () => {
                 from.setMonth(from.getMonth() + 1);
             }
             setMonths(months);
-
-            const revenue = months.map((month) => generateRandomData(0, 20));
-            const expenses = months.map((month) => generateRandomData(0, 30));
-            const profit = months.map((month) => generateRandomData(0, 40));
-            const growthRate = months.map((month) => generateRandomData(0, 50));
-            setData({ revenue, expenses, profit, growthRate, keyMetric: data.keyMetric });
+            setData((prev) => ({
+                ...prev,
+                revenue: months.map(() => generateRandomData(0, 20)),
+                expenses: months.map(() => generateRandomData(0, 30)),
+                profit: months.map(() => generateRandomData(0, 40)),
+                growthRate: months.map(() => generateRandomData(0, 50)),
+            }));
         }
     };
 
     const changeKeyMetricData = () => {
-        const keyMetric = { date: randomDate(), value: generateRandomData(0, 100) };
-        setData({ ...data, keyMetric });
+        setData((prev) => ({ ...prev, keyMetric: { date: randomDate(), value: generateRandomData(0, 100) } }));
     };
 
-    useEffect(() => {
-        changePlotData(fromDate, toDate);
-    }, [fromDate, toDate]);
+    useEffect(() => { changePlotData(fromDate, toDate); }, [fromDate, toDate]);
+    useEffect(() => { changeKeyMetricData(); }, [selectedMetric]);
+    useEffect(() => { changeKeyMetricData(); changePlotData(fromDate, toDate); }, [selectedRegion]);
 
-    useEffect(() => {
-        changeKeyMetricData();
-    }, [selectedMetric]);
-
-    useEffect(() => {
-        changeKeyMetricData();
-        changePlotData(fromDate, toDate);
-    }, [selectedRegion]);
+    // --- CSV data builders ---
+    const trendsCsvData = months.map((month, i) => ({
+        month,
+        revenue: data.revenue[i] ?? "",
+        expenses: data.expenses[i] ?? "",
+        profit: data.profit[i] ?? "",
+        growthRate: data.growthRate[i] ?? "",
+    }));
 
     return (
         <Grid container py={2} flexDirection="column">
@@ -89,403 +95,115 @@ const Dashboard = () => {
 
             <Grid container spacing={2}>
                 <Grid container item sm={12} md={4} spacing={4}>
-                        <Grid item width="100%">
-                            <Card
-                                title="Key Metric"
-                                footer={(
-                                    <Box
-                                        width="100%"
-                                        height="100px"
-                                        display="flex"
-                                        flexDirection="column"
-                                        justifyContent="center"
-                                        alignItems="center"
-                                        backgroundColor="greyDark.main"
-                                        py={1}
-                                    >
-                                        {selectedMetric && (
-                                            <>
-                                                <Typography variant="body">
-                                                    {`Latest value of ${selectedMetric} for ${selectedRegion}`}
-                                                </Typography>
-                                                <Typography variant="body1" fontWeight="bold" color="primary.main">
-                                                    {`${data.keyMetric.date.toLocaleString("en-GB", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} - ${data.keyMetric.value.toFixed(2)}%`}
-                                                </Typography>
-                                            </>
-                                        )}
-                                        {!selectedMetric && (
-                                            <>
-                                                <Typography variant="body1" fontWeight="bold" color="white.main">
-                                                    {"No metric selected"}
-                                                </Typography>
-                                            </>
-                                        )}
-                                    </Box>
-                                )}
-                            >
-                                <Box height="100px" display="flex" alignItems="center" justifyContent="space-between">
-                                    <Typography width="fit-content" variant="subtitle1">Metric:</Typography>
-                                    <Dropdown
-                                        width="50%"
-                                        height="40px"
-                                        size="small"
-                                        placeholder="Select"
-                                        background="greyDark"
-                                        items={availableMetrics.map((metric) => ({ value: metric, text: metric }))}
-                                        value={selectedMetric}
-                                        onChange={(event) => setSelectedMetric(event.target.value)}
-                                    />
+                    <Grid item width="100%">
+                        {/* Key Metric — stat card, no CSV export */}
+                        <Card
+                            title="Key Metric"
+                            footer={(
+                                <Box width="100%" height="100px" display="flex" flexDirection="column"
+                                    justifyContent="center" alignItems="center" backgroundColor="greyDark.main" py={1}>
+                                    {selectedMetric ? (
+                                        <>
+                                            <Typography variant="body">{`Latest value of ${selectedMetric} for ${selectedRegion}`}</Typography>
+                                            <Typography variant="body1" fontWeight="bold" color="primary.main">
+                                                {`${data.keyMetric.date.toLocaleString("en-GB", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} - ${data.keyMetric.value.toFixed(2)}%`}
+                                            </Typography>
+                                        </>
+                                    ) : (
+                                        <Typography variant="body1" fontWeight="bold" color="white.main">{"No metric selected"}</Typography>
+                                    )}
                                 </Box>
-                            </Card>
-                        </Grid>
-                        <Grid item width="100%">
-                            <Card title="Regional Overview">
-                                <Map />
-                            </Card>
-                        </Grid>
+                            )}
+                        >
+                            <Box height="100px" display="flex" alignItems="center" justifyContent="space-between">
+                                <Typography width="fit-content" variant="subtitle1">Metric:</Typography>
+                                <Dropdown
+                                    width="50%" height="40px" size="small" placeholder="Select" background="greyDark"
+                                    items={availableMetrics.map((metric) => ({ value: metric, text: metric }))}
+                                    value={selectedMetric}
+                                    onChange={(event) => setSelectedMetric(event.target.value)}
+                                />
+                            </Box>
+                        </Card>
+                    </Grid>
+                    <Grid item width="100%">
+                        {/* Regional Overview — map, no CSV export */}
+                        <Card title="Regional Overview">
+                            <Map />
+                        </Card>
+                    </Grid>
                 </Grid>
 
                 <Grid item sm={12} md={8}>
-                    <Card title="Trends">
+                    {/* Trends — one card wrapping 4 plots, single CSV export with all series */}
+                    <Card
+                        title="Trends"
+                        showCsvExport
+                        chartName="trends"
+                        csvData={trendsCsvData}
+                    >
                         <Box display="flex" justifyContent="space-between" mb={1}>
                             <Grid item xs={12} sm={6} display="flex" flexDirection="row" alignItems="center">
-                                <Typography variant="subtitle1" align="center" mr={2}>
-                                    {"From: "}
-                                </Typography>
-                                <DatePicker
-                                    width="200px"
-                                    views={["month", "year"]}
-                                    inputFormat="MM/YYYY"
-                                    label="From"
-                                    background="greyDark"
-                                    value={fromDate}
-                                    onChange={(value) => setFromDate(value)}
-                                />
+                                <Typography variant="subtitle1" align="center" mr={2}>{"From: "}</Typography>
+                                <DatePicker width="200px" views={["month", "year"]} inputFormat="MM/YYYY"
+                                    label="From" background="greyDark" value={fromDate}
+                                    onChange={(value) => setFromDate(value)} />
                             </Grid>
                             <Grid item xs={12} sm={6} display="flex" flexDirection="row" alignItems="center" justifyContent="flex-end">
-                                <Typography variant="subtitle1" align="center" mr={2}>
-                                    {"To: "}
-                                </Typography>
-                                <DatePicker
-                                    width="200px"
-                                    views={["month", "year"]}
-                                    inputFormat="MM/YYYY"
-                                    label="To"
-                                    background="greyDark"
-                                    value={toDate}
-                                    onChange={(value) => setToDate(value)}
-                                />
+                                <Typography variant="subtitle1" align="center" mr={2}>{"To: "}</Typography>
+                                <DatePicker width="200px" views={["month", "year"]} inputFormat="MM/YYYY"
+                                    label="To" background="greyDark" value={toDate}
+                                    onChange={(value) => setToDate(value)} />
                             </Grid>
                         </Box>
+
                         <Grid container spacing={1} width="100%">
-                            <Grid item xs={12} md={6}>
-                                <Plot
-                                    data={[
-                                        {
-                                            x: months,
-                                            y: data.revenue,
-                                            type: "lines",
-                                            fill: "tozeroy",
-                                            color: "third",
-                                            line: { shape: "spline", smoothing: 1},
-                                            markerSize: 0,
-                                            hoverinfo: "none",
-                                        },
-                                        {
-                                            x: months,
-                                            y: data.revenue,
-                                            type: "scatter",
-                                            mode: "markers",
-                                            color: "primary",
-                                            markerSize: 10,
-                                            name: "",
-                                            hoverinfo: "none",
-                                        },
-                                    ]}
-                                    showLegend={false}
-                                    title="Revenue"
-                                    titleColor="primary"
-                                    titleFontSize={16}
-                                    displayBar={false}
-                                    height="250px"
-                                    annotations={[
-                                        {
-                                            x: months[data.revenue.indexOf(Math.min(...data.revenue))],
-                                            y: Math.min(...data.revenue),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Min: ${Math.min(...data.revenue).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
+                            {[
+                                { key: "revenue", label: "Revenue", yData: data.revenue, maxVal: 20 },
+                                { key: "expenses", label: "Expenses", yData: data.expenses, maxVal: 30 },
+                                { key: "profit", label: "Profit", yData: data.profit, maxVal: 40 },
+                                { key: "growthRate", label: "Growth Rate", yData: data.growthRate, maxVal: 50 },
+                            ].map(({ key, label, yData }) => (
+                                <Grid item xs={12} md={6} key={key}>
+                                    <Plot
+                                        data={[
+                                            { x: months, y: yData, type: "lines", fill: "tozeroy", color: "third", line: { shape: "spline", smoothing: 1 }, markerSize: 0, hoverinfo: "none" },
+                                            { x: months, y: yData, type: "scatter", mode: "markers", color: "primary", markerSize: 10, name: "", hoverinfo: "none" },
+                                        ]}
+                                        showLegend={false}
+                                        title={label}
+                                        titleColor="primary"
+                                        titleFontSize={16}
+                                        displayBar={false}
+                                        height="250px"
+                                        annotations={yData.length ? [
+                                            {
+                                                x: months[yData.indexOf(Math.min(...yData))],
+                                                y: Math.min(...yData),
+                                                xref: "x", yref: "y",
+                                                text: `Min: ${Math.min(...yData).toFixed(2)}%`,
+                                                showarrow: true, font: { size: 16, color: "#ffffff" },
+                                                align: "center", arrowhead: 2, arrowsize: 1, arrowwidth: 2,
+                                                arrowcolor: colors.primary, borderpad: 4, bgcolor: colors.primary, opacity: 0.8,
                                             },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                        {
-                                            x: months[data.revenue.indexOf(Math.max(...data.revenue))],
-                                            y: Math.max(...data.revenue),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Max: ${Math.max(...data.revenue).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
+                                            {
+                                                x: months[yData.indexOf(Math.max(...yData))],
+                                                y: Math.max(...yData),
+                                                xref: "x", yref: "y",
+                                                text: `Max: ${Math.max(...yData).toFixed(2)}%`,
+                                                showarrow: true, font: { size: 16, color: "#ffffff" },
+                                                align: "center", arrowhead: 2, arrowsize: 1, arrowwidth: 2,
+                                                arrowcolor: colors.primary, borderpad: 4, bgcolor: colors.primary, opacity: 0.8,
                                             },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                    ]}
-                                />
-                                <Typography variant="body1" textAlign="center">
-                                    {`Average: ${(data.revenue.reduce((acc, curr) => acc + curr, 0) / data.revenue.length).toFixed(2)}%`}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Plot
-                                    data={[
-                                        {
-                                            x: months,
-                                            y: data.expenses,
-                                            type: "lines",
-                                            fill: "tozeroy",
-                                            color: "third",
-                                            line: { shape: "spline", smoothing: 1},
-                                            markerSize: 0,
-                                            hoverinfo: "none",
-                                        },
-                                        {
-                                            x: months,
-                                            y: data.expenses,
-                                            type: "scatter",
-                                            mode: "markers",
-                                            color: "primary",
-                                            markerSize: 10,
-                                            name: "",
-                                            hoverinfo: "none",
-                                        },
-                                    ]}
-                                    showLegend={false}
-                                    title="Expenses"
-                                    titleColor="primary"
-                                    titleFontSize={16}
-                                    displayBar={false}
-                                    height="250px"
-                                    annotations={[
-                                        {
-                                            x: months[data.expenses.indexOf(Math.min(...data.expenses))],
-                                            y: Math.min(...data.expenses),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Min: ${Math.min(...data.expenses).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
-                                            },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                        {
-                                            x: months[data.expenses.indexOf(Math.max(...data.expenses))],
-                                            y: Math.max(...data.expenses),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Max: ${Math.max(...data.expenses).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
-                                            },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                    ]}
-                                />
-                                <Typography variant="body1" textAlign="center">
-                                    {`Average: ${(data.expenses.reduce((acc, curr) => acc + curr, 0) / data.expenses.length).toFixed(2)}%`}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Plot
-                                    data={[
-                                        {
-                                            x: months,
-                                            y: data.profit,
-                                            type: "lines",
-                                            fill: "tozeroy",
-                                            color: "third",
-                                            line: { shape: "spline", smoothing: 1},
-                                            markerSize: 0,
-                                            hoverinfo: "none",
-                                        },
-                                        {
-                                            x: months,
-                                            y: data.profit,
-                                            type: "scatter",
-                                            mode: "markers",
-                                            color: "primary",
-                                            markerSize: 10,
-                                            name: "",
-                                            hoverinfo: "none",
-                                        },
-                                    ]}
-                                    showLegend={false}
-                                    title="Profit"
-                                    titleColor="primary"
-                                    titleFontSize={16}
-                                    displayBar={false}
-                                    height="250px"
-                                    annotations={[
-                                        {
-                                            x: months[data.profit.indexOf(Math.min(...data.profit))],
-                                            y: Math.min(...data.profit),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Min: ${Math.min(...data.profit).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
-                                            },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                        {
-                                            x: months[data.profit.indexOf(Math.max(...data.profit))],
-                                            y: Math.max(...data.profit),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Max: ${Math.max(...data.profit).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
-                                            },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                    ]}
-                                />
-                                <Typography variant="body1" textAlign="center">
-                                    {`Average: ${(data.profit.reduce((acc, curr) => acc + curr, 0) / data.profit.length).toFixed(2)}%`}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Plot
-                                    data={[
-                                        {
-                                            x: months,
-                                            y: data.growthRate,
-                                            type: "lines",
-                                            fill: "tozeroy",
-                                            color: "third",
-                                            line: { shape: "spline", smoothing: 1},
-                                            markerSize: 0,
-                                            hoverinfo: "none",
-                                        },
-                                        {
-                                            x: months,
-                                            y: data.growthRate,
-                                            type: "scatter",
-                                            mode: "markers",
-                                            color: "primary",
-                                            markerSize: 10,
-                                            name: "",
-                                            hoverinfo: "none",
-                                        },
-                                    ]}
-                                    showLegend={false}
-                                    title="Growth Rate"
-                                    titleColor="primary"
-                                    titleFontSize={16}
-                                    displayBar={false}
-                                    height="250px"
-                                    annotations={[
-                                        {
-                                            x: months[data.growthRate.indexOf(Math.min(...data.growthRate))],
-                                            y: Math.min(...data.growthRate),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Min: ${Math.min(...data.growthRate).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
-                                            },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                        {
-                                            x: months[data.growthRate.indexOf(Math.max(...data.growthRate))],
-                                            y: Math.max(...data.growthRate),
-                                            xref: "x",
-                                            yref: "y",
-                                            text: `Max: ${Math.max(...data.growthRate).toFixed(2)}%`,
-                                            showarrow: true,
-                                            font: {
-                                                size: 16,
-                                                color: "#ffffff"
-                                            },
-                                            align: "center",
-                                            arrowhead: 2,
-                                            arrowsize: 1,
-                                            arrowwidth: 2,
-                                            arrowcolor: colors.primary,
-                                            borderpad: 4,
-                                            bgcolor: colors.primary,
-                                            opacity: 0.8
-                                        },
-                                    ]}
-                                />
-                                <Typography variant="body1" textAlign="center">
-                                    {`Average: ${(data.growthRate.reduce((acc, curr) => acc + curr, 0) / data.growthRate.length).toFixed(2)}%`}
-                                </Typography>
-                            </Grid>
+                                        ] : []}
+                                    />
+                                    <Typography variant="body1" textAlign="center">
+                                        {yData.length
+                                            ? `Average: ${(yData.reduce((a, c) => a + c, 0) / yData.length).toFixed(2)}%`
+                                            : ""}
+                                    </Typography>
+                                </Grid>
+                            ))}
                         </Grid>
                     </Card>
                 </Grid>

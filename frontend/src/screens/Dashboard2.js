@@ -6,6 +6,7 @@ import Card from "../components/Card.js";
 import Plot from "../components/Plot.js";
 
 import { getData } from "../api/index.js";
+import { plotlyTracesToCsvRows } from "../utils/exportCsv.js";
 import useGlobalState from "../use-global-state.js";
 
 const availableRegions = ["Thessaloniki", "Athens", "Patras"];
@@ -19,12 +20,33 @@ const Dashboard = () => {
     useEffect(() => {
         getData().then((tempData) => {
             const { success, quarterlySalesDistribution, budgetVsActual, timePlot } = tempData;
-
             if (success) {
                 setData({ quarterlySalesDistribution, budgetVsActual, timePlot });
             }
         });
     }, [selectedRegion]);
+
+    // --- CSV data builders ---
+    const quarterlySalesCsvData = [
+        ...(data?.quarterlySalesDistribution?.Q1 || []).map((v) => ({ quarter: "Q1", value: v })),
+        ...(data?.quarterlySalesDistribution?.Q2 || []).map((v) => ({ quarter: "Q2", value: v })),
+        ...(data?.quarterlySalesDistribution?.Q3 || []).map((v) => ({ quarter: "Q3", value: v })),
+    ];
+
+    const budgetVsActualCsvData = Object.entries(data?.budgetVsActual || {}).map(
+        ([month, values]) => ({
+            month,
+            budget: values?.budget ?? "",
+            actual: values?.actual ?? "",
+            forecast: values?.forecast ?? "",
+        })
+    );
+
+    const performanceCsvData = plotlyTracesToCsvRows([
+        { name: "Projected", x: Array.from({ length: 20 }, (_, i) => i + 1), y: data?.timePlot?.projected },
+        { name: "Actual", x: Array.from({ length: 20 }, (_, i) => i + 1), y: data?.timePlot?.actual },
+        { name: "Historical Avg", x: Array.from({ length: 20 }, (_, i) => i + 1), y: data?.timePlot?.historicalAvg },
+    ]);
 
     return (
         <Grid container py={2} flexDirection="column">
@@ -53,27 +75,17 @@ const Dashboard = () => {
 
             <Grid container spacing={2}>
                 <Grid item sm={12} md={6}>
-                    <Card title="Quarterly Sales Distribution">
+                    <Card
+                        title="Quarterly Sales Distribution"
+                        showCsvExport
+                        chartName="quarterly-sales"
+                        csvData={quarterlySalesCsvData}
+                    >
                         <Plot
                             data={[
-                                {
-                                    title: "Q1",
-                                    y: data?.quarterlySalesDistribution?.Q1,
-                                    type: "box",
-                                    color: "primary",
-                                },
-                                {
-                                    title: "Q2",
-                                    y: data?.quarterlySalesDistribution?.Q2,
-                                    type: "box",
-                                    color: "secondary",
-                                },
-                                {
-                                    title: "Q3",
-                                    y: data?.quarterlySalesDistribution?.Q3,
-                                    type: "box",
-                                    color: "third",
-                                },
+                                { title: "Q1", y: data?.quarterlySalesDistribution?.Q1, type: "box", color: "primary" },
+                                { title: "Q2", y: data?.quarterlySalesDistribution?.Q2, type: "box", color: "secondary" },
+                                { title: "Q3", y: data?.quarterlySalesDistribution?.Q3, type: "box", color: "third" },
                             ]}
                             showLegend={false}
                             displayBar={false}
@@ -82,30 +94,30 @@ const Dashboard = () => {
                         />
                     </Card>
                 </Grid>
+
                 <Grid item sm={12} md={6}>
-                    <Card title="Budget vs Actual Spending">
+                    <Card
+                        title="Budget vs Actual Spending"
+                        showCsvExport
+                        chartName="budget-vs-actual"
+                        csvData={budgetVsActualCsvData}
+                    >
                         <Plot
                             data={[
                                 {
                                     x: ["January", "February", "March", "April", "May", "June"],
                                     y: Object.values(data?.budgetVsActual).map(month => month.budget),
-                                    type: "bar",
-                                    color: "primary",
-                                    title: "Budget",
+                                    type: "bar", color: "primary", title: "Budget",
                                 },
                                 {
                                     x: ["January", "February", "March", "April", "May", "June"],
                                     y: Object.values(data?.budgetVsActual).map(month => month.actual),
-                                    type: "bar",
-                                    color: "secondary",
-                                    title: "Actual",
+                                    type: "bar", color: "secondary", title: "Actual",
                                 },
                                 {
                                     x: ["January", "February", "March", "April", "May", "June"],
                                     y: Object.values(data?.budgetVsActual).map(month => month.forecast),
-                                    type: "bar",
-                                    color: "third",
-                                    title: "Forecast",
+                                    type: "bar", color: "third", title: "Forecast",
                                 },
                             ]}
                             showLegend={true}
@@ -115,31 +127,19 @@ const Dashboard = () => {
                         />
                     </Card>
                 </Grid>
+
                 <Grid item sm={12}>
-                    <Card title="Performance Over Time">
+                    <Card
+                        title="Performance Over Time"
+                        showCsvExport
+                        chartName="performance"
+                        csvData={performanceCsvData}
+                    >
                         <Plot
                             data={[
-                                {
-                                    title: "Projected",
-                                    x: Array.from({ length: 20 }, (_, i) => i + 1),
-                                    y: data?.timePlot?.projected,
-                                    type: "line",
-                                    color: "primary",
-                                },
-                                {
-                                    title: "Actual",
-                                    x: Array.from({ length: 20 }, (_, i) => i + 1),
-                                    y: data?.timePlot?.actual,
-                                    type: "line",
-                                    color: "secondary",
-                                },
-                                {
-                                    title: "Historical Avg",
-                                    x: Array.from({ length: 20 }, (_, i) => i + 1),
-                                    y: data?.timePlot?.historicalAvg,
-                                    type: "line",
-                                    color: "third",
-                                },
+                                { title: "Projected", x: Array.from({ length: 20 }, (_, i) => i + 1), y: data?.timePlot?.projected, type: "line", color: "primary" },
+                                { title: "Actual", x: Array.from({ length: 20 }, (_, i) => i + 1), y: data?.timePlot?.actual, type: "line", color: "secondary" },
+                                { title: "Historical Avg", x: Array.from({ length: 20 }, (_, i) => i + 1), y: data?.timePlot?.historicalAvg, type: "line", color: "third" },
                             ]}
                             showLegend={true}
                             displayBar={false}
