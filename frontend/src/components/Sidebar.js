@@ -8,6 +8,7 @@ import { ExpandMore } from "@mui/icons-material";
 import Accordion from "./Accordion.js";
 
 import { jwt } from "../utils/index.js";
+import useGlobalState from "../use-global-state.js";
 
 const useStyles = makeStyles((theme) => ({
 	sidebar: {
@@ -70,6 +71,7 @@ const Sidebar = ({ isSmall: sidebarIsSmall }) => {
 	const [isSmall, setIsSmall] = useState(false);
 	const navigate = useNavigate();
 	const classes = useStyles();
+	const { favoriteDashboards } = useGlobalState();
 
 	const isAdmin = jwt.isAdmin();
 
@@ -102,8 +104,44 @@ const Sidebar = ({ isSmall: sidebarIsSmall }) => {
 		},
 	];
 
+	const favorites = [
+		{
+			path: "/dashboard",
+			text: "Overview",
+			testId: "sidebar-favorite-dashboard",
+		},
+		{
+			path: "/dashboard1",
+			text: "Analytics",
+			testId: "sidebar-favorite-dashboard1",
+		},
+		{
+			path: "/dashboard2",
+			text: "Insights",
+			testId: "sidebar-favorite-dashboard2",
+		},
+	].filter((favorite) => favoriteDashboards.includes(favorite.path));
+
 	return (
 		<div className={classes.sidebar} style={{ width: (isSmall) ? "50px" : "200px", padding: (isSmall) ? "20px 5px" : "20px 5px", textAlign: "center" }}>
+			{!isSmall && favorites.length > 0 && (
+				<Grid container direction="column" data-testid="sidebar-favorites-section" sx={{ mb: 2 }}>
+					<Grid item px={2} py={1}>
+						<Typography fontWeight="bold" textAlign="left">{"Favorites"}</Typography>
+					</Grid>
+					{favorites.map((favorite) => (
+						<Button
+							key={favorite.path}
+							data-testid={favorite.testId}
+							color="white"
+							sx={{ justifyContent: "flex-start", px: 2 }}
+							onClick={() => navigate(favorite.path)}
+						>
+							<Typography sx={{ textTransform: "capitalize" }}>{favorite.text}</Typography>
+						</Button>
+					))}
+				</Grid>
+			)}
 			{!isSmall && buttons.map((button) => (
 				<ButtonWithText
 					key={button.text}

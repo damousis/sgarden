@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Grid, Typography, Box } from "@mui/material";
+import { Grid, Typography, Box, IconButton } from "@mui/material";
+import { Star, StarBorder } from "@mui/icons-material";
 
 import Dropdown from "../components/Dropdown.js";
 import Card from "../components/Card.js";
 import Plot from "../components/Plot.js";
+import useGlobalState from "../use-global-state.js";
 
 const availableRegions = ["Thessaloniki", "Athens", "Patras"];
 const generateRandomData = (minimum = 0, maximum = 100) => {
@@ -23,6 +25,8 @@ const formatNumber = (number, symbol = "", showSign = true) => {
 const Dashboard = () => {
     const [selectedRegion, setSelectedRegion] = useState("Thessaloniki");
     const [data, setData] = useState({});
+    const { favoriteDashboards, toggleFavoriteDashboard } = useGlobalState();
+    const isFavorite = favoriteDashboards.includes("/dashboard");
 
     useEffect(() => {
         const newData = {
@@ -48,9 +52,19 @@ const Dashboard = () => {
 
     return (
         <Grid container py={2} flexDirection="column">
-            <Typography variant="h4" gutterBottom color="white.main">
-                Overview
-            </Typography>
+            <Grid item display="flex" alignItems="center" mb={1}>
+                <Typography variant="h4" gutterBottom color="white.main" sx={{ mb: 0 }}>
+                    Overview
+                </Typography>
+                <IconButton
+                    data-testid="bookmark-toggle-dashboard"
+                    sx={{ color: "white.main", ml: 1 }}
+                    onClick={() => toggleFavoriteDashboard("/dashboard")}
+                >
+                    {isFavorite ? <Star /> : <StarBorder />}
+                </IconButton>
+                {isFavorite && <Box data-testid="bookmark-active-dashboard" sx={{ width: 1, height: 1 }} />}
+            </Grid>
 
             <Grid item style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: "20px" }}>
                 <Typography variant="body1" style={{ marginRight: "10px" }} color="white.main">Region:</Typography>
